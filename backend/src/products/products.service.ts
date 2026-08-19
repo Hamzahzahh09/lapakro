@@ -27,7 +27,7 @@ export class ProductsService {
       stock: dto.stock ?? 1,
       deliveryMethod: dto.deliveryMethod || 'manual',
       proofFiles: dto.proofFiles || [],
-      status: 'active',
+      status: 'pending',
       averageRating: 0,
       reviewCount: 0,
       soldCount: 0,

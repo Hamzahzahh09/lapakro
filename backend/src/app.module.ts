@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,6 +12,7 @@ import { ChatModule } from './chat/chat.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { DisputesModule } from './disputes/disputes.module';
 import { AdminModule } from './admin/admin.module';
+import { EmailModule } from './common/email/email.module';
 
 // Entitas
 import { User } from './users/entities/user.entity';
@@ -21,8 +22,13 @@ import { Wallet } from './wallet/entities/wallet.entity';
 import { WalletTransaction } from './wallet/entities/wallet-transaction.entity';
 import { Payment } from './payment/entities/payment.entity';
 import { Review } from './reviews/entities/review.entity';
+import { SellerRating } from './reviews/entities/seller-rating.entity';
 import { Dispute } from './disputes/entities/dispute.entity';
 import { ChatMessage } from './chat/entities/chat-message.entity';
+
+// Common modules
+import { LoggerService } from './common/logger/logger.service';
+import { HttpLoggingMiddleware } from './common/middleware/http-logging.middleware';
 
 @Module({
   imports: [
@@ -45,13 +51,22 @@ import { ChatMessage } from './chat/entities/chat-message.entity';
           WalletTransaction,
           Payment,
           Review,
+          SellerRating,
           Dispute,
           ChatMessage,
         ],
-        synchronize: true, // Akan otomatis membuat database/tabel untuk development
+        synchronize: configService.get<string>('NODE_ENV', 'development') === 'development',
+        logging: configService.get<string>('NODE_ENV', 'development') === 'development',
+        migrationsRun: configService.get<string>('NODE_ENV', 'development') !== 'development',
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+        ignoreUserAgents: [/bot|crawler/i],
+      },
+    ]),
     AuthModule,
     UsersModule,
     ProductsModule,
@@ -62,7 +77,13 @@ import { ChatMessage } from './chat/entities/chat-message.entity';
     ReviewsModule,
     DisputesModule,
     AdminModule,
+    EmailModule,
   ],
+  providers: [LoggerService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpLoggingMiddleware).forRoutes('*');
+  }
+}
 

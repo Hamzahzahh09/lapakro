@@ -20,7 +20,7 @@ export function useAuth() {
           localStorage.removeItem("auth_token")
         })
     }
-  }, [])
+  }, [login, token])
 
   const loginAction = useCallback(
     async (email: string, password: string) => {

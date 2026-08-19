@@ -55,8 +55,8 @@ export class WalletService {
     const wallet = await this.getOrCreateWallet(userId);
     const now = new Date();
 
-    wallet.balance = Number(wallet.balance) + Number(amount);
-    wallet.totalDeposited = Number(wallet.totalDeposited) + Number(amount);
+    wallet.balance = Number(wallet.balance || 0) + Number(amount);
+    wallet.totalDeposited = Number(wallet.totalDeposited || 0) + Number(amount);
     wallet.updatedAt = now;
 
     await this.walletRepository.save(wallet);
@@ -95,7 +95,7 @@ export class WalletService {
     const fee = bankName.toLowerCase().includes('bank') ? 0 : 2500;
     const totalDeduction = amount + fee;
 
-    if (wallet.balance < totalDeduction) {
+    if (Number(wallet.balance || 0) < totalDeduction) {
       throw new HttpException(
         'Insufficient balance',
         HttpStatus.BAD_REQUEST,
@@ -103,8 +103,8 @@ export class WalletService {
     }
 
     const now = new Date();
-    wallet.balance = Number(wallet.balance) - Number(totalDeduction);
-    wallet.totalWithdrawn = Number(wallet.totalWithdrawn) + Number(amount);
+    wallet.balance = Number(wallet.balance || 0) - Number(totalDeduction);
+    wallet.totalWithdrawn = Number(wallet.totalWithdrawn || 0) + Number(amount);
     wallet.updatedAt = now;
 
     await this.walletRepository.save(wallet);
@@ -134,7 +134,7 @@ export class WalletService {
 
   async getBalance(userId: string): Promise<{ balance: number }> {
     const wallet = await this.getOrCreateWallet(userId);
-    return { balance: Number(wallet.balance) };
+    return { balance: Number(wallet.balance || 0) };
   }
 }
 

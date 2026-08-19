@@ -50,23 +50,55 @@ export interface CartItem {
   price: number
   image: string
   quantity: number
+  sellerId: string
+  seller: string
 }
 
 interface CartState {
   items: CartItem[]
   addItem: (item: CartItem) => void
   removeItem: (id: string) => void
+  updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
+  totalItems: () => number
+  totalPrice: () => number
 }
 
-export const useCartStore = create<CartState>((set) => ({
-  items: [],
-  addItem: (item) =>
-    set((state) => ({ items: [...state.items, item] })),
-  removeItem: (id) =>
-    set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
-  clearCart: () => set({ items: [] }),
-}))
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      addItem: (item) =>
+        set((state) => {
+          const existing = state.items.find((i) => i.productId === item.productId)
+          if (existing) {
+            return {
+              items: state.items.map((i) =>
+                i.productId === item.productId
+                  ? { ...i, quantity: i.quantity + item.quantity }
+                  : i
+              ),
+            }
+          }
+          return { items: [...state.items, item] }
+        }),
+      removeItem: (id) =>
+        set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+      updateQuantity: (id, quantity) =>
+        set((state) => ({
+          items: quantity <= 0
+            ? state.items.filter((i) => i.id !== id)
+            : state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+        })),
+      clearCart: () => set({ items: [] }),
+      totalItems: () => get().items.reduce((acc, i) => acc + i.quantity, 0),
+      totalPrice: () => get().items.reduce((acc, i) => acc + i.price * i.quantity, 0),
+    }),
+    {
+      name: "cart-storage",
+    }
+  )
+)
 
 export interface Message {
   id: string

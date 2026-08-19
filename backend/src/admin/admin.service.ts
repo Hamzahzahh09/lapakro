@@ -26,7 +26,7 @@ export class AdminService {
     const completedTransactions = allTransactions.filter(
       (t) => t.status === 'completed',
     );
-    const gmv = completedTransactions.reduce((sum, t) => sum + Number(t.totalPrice), 0);
+    const gmv = completedTransactions.reduce((sum, t) => sum + Number(t.totalPrice || 0), 0);
     const disputedCount = allTransactions.filter(
       (t) => t.status === 'disputed',
     ).length;
@@ -74,8 +74,8 @@ export class AdminService {
     return this.disputesService.resolve(id, resolution, adminNote, winnerId);
   }
 
-  async getUsers() {
-    return this.usersService.findAll();
+  async getUsers(page?: number, limit?: number, search?: string) {
+    return this.usersService.findAll(page, limit, search);
   }
 
   async getUser(id: string) {

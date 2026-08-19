@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import * as helmet from 'helmet';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { LoggerService } from './common/logger/logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const loggerService = app.get(LoggerService);
 
   app.use(helmet.default({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -24,7 +27,11 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3001);
-  console.log(`LapakRo backend running on http://localhost:${process.env.PORT ?? 3001}`);
+  // Register global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter(loggerService));
+
+  const port = process.env.PORT ?? 3001;
+  await app.listen(port);
+  loggerService.log(`LapakRo backend running on http://localhost:${port}`);
 }
 bootstrap();

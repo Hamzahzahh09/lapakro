@@ -23,12 +23,18 @@ export class AdminController {
     private adminService: AdminService,
   ) {}
 
+  @Get('dashboard')
+  async getDashboard() {
+    const data = await this.adminService.getDashboard();
+    return { success: true, data };
+  }
+
   @Get('users')
   async getUsers(@Query() query: { page?: string; limit?: string; search?: string }) {
     const page = parseInt(query.page || '1', 10);
     const limit = parseInt(query.limit || '20', 10);
-    const users = await this.adminService.getUsers();
-    return { success: true, data: users };
+    const users = await this.adminService.getUsers(page, limit, query.search);
+    return { success: true, data: users, page, limit };
   }
 
   @Get('users/:id')
