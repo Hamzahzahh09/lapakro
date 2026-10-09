@@ -1,6 +1,6 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,23 +11,50 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { formatRupiah, formatDate } from "@/lib/utils"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/store"
-import { Package, Search, Clock, CheckCircle2, XCircle, ChevronRight, MessageCircle, Loader2, RefreshCw } from "lucide-react"
+import {
+  Package, Search, Clock, CheckCircle2, XCircle,
+  ChevronRight, MessageCircle, Loader2, RefreshCw,
+  ShieldCheck, ArrowRightLeft, User as UserIcon
+} from "lucide-react"
 
 interface Transaction {
   id: string
   createdAt: string
   status: string
   totalPrice: number
+  productId?: string
+  sellerId?: string
+  buyerId?: string
+  notes?: string
   product: {
+    id?: string
     name: string
     category: string
   }
-  seller: { name: string }
+  seller: { id?: string; name: string }
+  buyer?: { id?: string; name: string }
 }
 
 export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center min-h-screen space-y-4 bg-[#F8FAFC]">
+          <Loader2 className="h-10 w-10 animate-spin text-[#D4A017]" />
+          <p className="text-[#6B7280] font-bold">Memuat transaksi...</p>
+        </div>
+      }
+    >
+      <TransactionsContent />
+    </Suspense>
+  )
+}
+
+function TransactionsContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const token = useAuthStore((s) => s.token)
+  const user = useAuthStore((s) => s.user)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -35,6 +62,33 @@ export default function TransactionsPage() {
   const [tab, setTab] = useState("all")
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [syncingReturn, setSyncingReturn] = useState(false)
+  const returnHandledRef = useRef(false)
+
+  const isAdmin = user?.role === "admin" || user?.role === "owner"
+
+  const handleChat = async (trx: Transaction) => {
+    try {
+      const sellerId = trx.sellerId || trx.seller?.id
+      if (!sellerId) {
+        router.push(`/transactions/${trx.id}`)
+        return
+      }
+      const res = await api.post<{ success: boolean; data: { id: string } }>('/chat/conversation', {
+        sellerId,
+        transactionId: trx.id,
+        productId: trx.productId || trx.product?.id,
+      })
+      if (res.data?.id) {
+        router.push(`/chat?id=${res.data.id}`)
+      } else {
+        router.push('/chat')
+      }
+    } catch {
+      router.push(`/transactions/${trx.id}`)
+    }
+  }
 
   const fetchTransactions = useCallback(async () => {
     if (!token) return
@@ -66,6 +120,84 @@ export default function TransactionsPage() {
     fetchTransactions()
   }, [fetchTransactions, router, token])
 
+  // User kembali dari halaman bayar Midtrans (?payment=finish&order_id=...).
+  // Langsung sinkronkan status ke backend karena webhook tidak menjangkau localhost.
+  useEffect(() => {
+    const paymentResult = searchParams.get("payment")
+    const orderId = searchParams.get("order_id")
+    if (!paymentResult || !token || returnHandledRef.current) return
+    returnHandledRef.current = true
+    router.replace("/transactions")
+    if (paymentResult === "finish" && orderId) {
+      setSyncingReturn(true)
+      api
+        .post<{
+          success: boolean
+          data: { payment: { status: string }; transaction: { id: string } | null }
+        }>("/payment/sync", { orderId })
+        .then((res) => {
+          const status = res.data?.payment?.status
+          if (status === "completed") {
+            alert("Pembayaran berhasil! Transaksi menunggu penjual mengirim produk.")
+          } else if (status === "pending") {
+            alert("Pembayaran masih pending. Selesaikan pembayaran, lalu tekan Cek Status di detail transaksi.")
+          } else if (status) {
+            alert(`Status pembayaran: ${status}.`)
+          }
+          fetchTransactions()
+        })
+        .catch((err: unknown) => {
+          console.error(err)
+          alert("Gagal menyinkronkan status pembayaran. Tekan Cek Status di detail transaksi.")
+        })
+        .finally(() => setSyncingReturn(false))
+    } else if (paymentResult === "error") {
+      alert("Pembayaran gagal atau dibatalkan.")
+    }
+  }, [searchParams, token, router, fetchTransactions])
+
+  const handleConfirm = async (trxId: string) => {
+    if (!confirm("Konfirmasi transaksi ini?")) return
+    setActionLoading(trxId)
+    try {
+      await api.patch(`/transactions/${trxId}/confirm`)
+      await fetchTransactions()
+    } catch (err: unknown) {
+      console.error(err)
+      alert("Gagal mengkonfirmasi transaksi")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleCancel = async (trxId: string) => {
+    if (!confirm("Batalkan transaksi ini?")) return
+    setActionLoading(trxId)
+    try {
+      await api.patch(`/transactions/${trxId}/cancel`)
+      await fetchTransactions()
+    } catch (err: unknown) {
+      console.error(err)
+      alert("Gagal membatalkan transaksi")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleForceComplete = async (trxId: string) => {
+    if (!confirm("Selesaikan transaksi ini secara langsung? Dana akan diteruskan ke penjual.")) return
+    setActionLoading(trxId)
+    try {
+      await api.patch(`/transactions/${trxId}/complete`)
+      await fetchTransactions()
+    } catch (err: unknown) {
+      console.error(err)
+      alert("Gagal menyelesaikan transaksi")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed": return <Badge variant="success" className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Selesai</Badge>
@@ -73,9 +205,36 @@ export default function TransactionsPage() {
       case "awaiting_seller": return <Badge variant="warning" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Menunggu Penjual</Badge>
       case "awaiting_buyer": return <Badge variant="warning" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Menunggu Pembeli</Badge>
       case "cancelled": return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Dibatalkan</Badge>
-      case "disputed": return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Dispute</Badge>
+      case "disputed": return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Komplain</Badge>
       default: return <Badge variant="outline">{status}</Badge>
     }
+  }
+
+  const canConfirm = (trx: Transaction) => {
+    if (isAdmin) {
+      return trx.status === "pending" || trx.status === "awaiting_seller" || trx.status === "awaiting_buyer"
+    }
+    if ((trx.status === "pending" || trx.status === "awaiting_seller") && trx.sellerId === user?.id) return true
+    if (trx.status === "awaiting_buyer" && trx.buyerId === user?.id) return true
+    return false
+  }
+
+  const canCancel = (trx: Transaction) => {
+    if (trx.status === "completed" || trx.status === "cancelled") return false
+    if (isAdmin) return true
+    if (trx.buyerId === user?.id) return true
+    if (trx.sellerId === user?.id && trx.status !== "awaiting_buyer") return true
+    return false
+  }
+
+  const getConfirmLabel = (trx: Transaction) => {
+    if (isAdmin) {
+      if (trx.status === "pending" || trx.status === "awaiting_seller") return "Konfirmasi (Seller)"
+      if (trx.status === "awaiting_buyer") return "Konfirmasi (Buyer)"
+    }
+    if ((trx.status === "pending" || trx.status === "awaiting_seller") && trx.sellerId === user?.id) return "Konfirmasi Pengiriman"
+    if (trx.status === "awaiting_buyer" && trx.buyerId === user?.id) return "Konfirmasi Penerimaan"
+    return "Konfirmasi"
   }
 
   return (
@@ -83,8 +242,30 @@ export default function TransactionsPage() {
       <div className="absolute inset-0 bg-cubes opacity-30 pointer-events-none -z-10" />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <h1 className="text-3xl font-black text-[#0F172A] mb-2">Riwayat Transaksi</h1>
-        <p className="text-[#6B7280] mb-8">Lacak semua pesanan pembelian dan penjualan Anda.</p>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-3xl font-black text-[#0F172A]">
+            {isAdmin ? "Manajemen Transaksi" : "Riwayat Transaksi"}
+          </h1>
+          {isAdmin && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+              <ShieldCheck className="h-3 w-3" /> Admin
+            </Badge>
+          )}
+        </div>
+        <p className="text-[#6B7280] mb-8">
+          {isAdmin
+            ? "Kelola dan eksekusi semua transaksi marketplace."
+            : "Lacak semua pesanan pembelian dan penjualan Anda."}
+        </p>
+
+        {syncingReturn && (
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[#FFD700]/40 bg-[#FFD700]/10 px-4 py-3">
+            <Loader2 className="h-5 w-5 animate-spin text-[#D4A017]" />
+            <p className="text-sm font-bold text-[#0F172A]">
+              Menyinkronkan status pembayaran dari Midtrans...
+            </p>
+          </div>
+        )}
 
         <Card className="bg-white border border-gray-100 shadow-sm mb-6">
           <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
@@ -92,6 +273,7 @@ export default function TransactionsPage() {
               <TabsList>
                 <TabsTrigger value="all">Semua</TabsTrigger>
                 <TabsTrigger value="pending">Berlangsung</TabsTrigger>
+                <TabsTrigger value="awaiting_buyer">Menunggu Konfirmasi</TabsTrigger>
                 <TabsTrigger value="completed">Berhasil</TabsTrigger>
                 <TabsTrigger value="cancelled">Dibatalkan</TabsTrigger>
               </TabsList>
@@ -131,8 +313,8 @@ export default function TransactionsPage() {
           <EmptyState
             icon={<Package className="h-12 w-12" />}
             title="Belum ada transaksi"
-            description="Anda belum memiliki transaksi apapun. Mulai belanja di marketplace kami."
-            action={{ label: "Mulai Belanja", href: "/products" }}
+            description={isAdmin ? "Belum ada transaksi di marketplace." : "Anda belum memiliki transaksi apapun. Mulai belanja di marketplace kami."}
+            action={isAdmin ? undefined : { label: "Mulai Belanja", href: "/products" }}
           />
         ) : (
           <>
@@ -141,27 +323,47 @@ export default function TransactionsPage() {
                 <Card key={trx.id} className="bg-white border border-gray-100 shadow-sm overflow-hidden hover:border-[#D4A017] transition-colors group">
                   <div className="bg-[#F9FAFB] px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100">
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="font-bold text-[#0F172A]">{trx.id}</span>
+                      <span className="font-bold text-[#0F172A] font-mono text-xs">{trx.id.slice(0, 8)}...</span>
                       <span className="text-[#6B7280] hidden sm:inline">•</span>
                       <span className="text-[#6B7280]">{formatDate(trx.createdAt)}</span>
                     </div>
-                    <div>{getStatusBadge(trx.status)}</div>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(trx.status)}
+                    </div>
                   </div>
 
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
-                      <div className="flex gap-4">
+                      <div className="flex gap-4 flex-1">
                         <div className="h-20 w-20 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
                           <Package className="h-8 w-8 text-[#D4A017]" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="font-bold text-lg text-[#0F172A] line-clamp-2 leading-tight mb-1 group-hover:text-[#D4A017] transition-colors">
                             {trx.product.name}
                           </h3>
-                          <p className="text-sm text-[#6B7280] mb-2">
-                            Penjual: <span className="font-semibold text-[#0F172A]">{trx.seller.name}</span>
-                          </p>
-                          <Badge variant="outline" className="text-xs bg-gray-50 border-transparent">{trx.product.category}</Badge>
+                          <div className="flex flex-col gap-1 text-sm text-[#6B7280]">
+                            <p>
+                              <span className="inline-flex items-center gap-1">
+                                <UserIcon className="h-3 w-3" />
+                                Penjual: <span className="font-semibold text-[#0F172A]">{trx.seller.name}</span>
+                              </span>
+                            </p>
+                            {isAdmin && trx.buyer && (
+                              <p>
+                                <span className="inline-flex items-center gap-1">
+                                  <UserIcon className="h-3 w-3" />
+                                  Pembeli: <span className="font-semibold text-[#0F172A]">{trx.buyer.name}</span>
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-2">
+                            <Badge variant="outline" className="text-xs bg-gray-50 border-transparent">{trx.product.category}</Badge>
+                          </div>
+                          {trx.notes && (
+                            <p className="text-xs text-[#6B7280] mt-2 italic">Catatan: {trx.notes}</p>
+                          )}
                         </div>
                       </div>
 
@@ -171,14 +373,66 @@ export default function TransactionsPage() {
                           <p className="text-xl font-black text-[#0F172A]">{formatRupiah(trx.totalPrice)}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-4">
-                          <Button variant="outline" size="sm" className="rounded-xl h-9 border-gray-200">
+                        <div className="flex flex-wrap items-center gap-2 mt-4">
+                          {/* Admin action buttons */}
+                          {canConfirm(trx) && (
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              className="rounded-xl h-9"
+                              disabled={actionLoading === trx.id}
+                              onClick={() => handleConfirm(trx.id)}
+                            >
+                              {actionLoading === trx.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                              )}
+                              {getConfirmLabel(trx)}
+                            </Button>
+                          )}
+
+                          {isAdmin && trx.status !== "completed" && trx.status !== "cancelled" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="rounded-xl h-9 bg-green-600 hover:bg-green-700"
+                              disabled={actionLoading === trx.id}
+                              onClick={() => handleForceComplete(trx.id)}
+                            >
+                              {actionLoading === trx.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <ArrowRightLeft className="h-4 w-4 mr-1" />
+                              )}
+                              Selesaikan
+                            </Button>
+                          )}
+
+                          {canCancel(trx) && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="rounded-xl h-9"
+                              disabled={actionLoading === trx.id}
+                              onClick={() => handleCancel(trx.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" /> Batalkan
+                            </Button>
+                          )}
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl h-9 border-gray-200"
+                            onClick={() => handleChat(trx)}
+                          >
                             <MessageCircle className="h-4 w-4 mr-2" /> Chat
                           </Button>
                           <Button
-                            variant="gold"
+                            variant="outline"
                             size="sm"
-                            className="rounded-xl h-9"
+                            className="rounded-xl h-9 border-gray-200"
                             onClick={() => router.push(`/transactions/${trx.id}`)}
                           >
                             Detail <ChevronRight className="h-4 w-4 ml-1" />

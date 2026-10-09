@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
  {formatRupiah(d.revenue).replace("Rp","").trim()}
  </span>
  <div
- className="w-full rounded-t-md bg-violet-500 transition-all hover:bg-violet-600"style={{ height: `${height}%` }}
+ className="w-full rounded-t-md bg-[#D4A017] transition-all hover:bg-[#A67C0A]"style={{ height: `${height}%` }}
  />
  <span className="text-xs text-slate-500">{d.month}</span>
  </div>

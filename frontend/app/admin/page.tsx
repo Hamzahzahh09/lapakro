@@ -31,16 +31,16 @@ export default function AdminDashboardPage() {
  if (loading) {
  return (
  <div className="flex items-center justify-center min-h-[60vh]">
- <Loader2 className="h-8 w-8 animate-spin text-violet-500"/>
+ <Loader2 className="h-8 w-8 animate-spin text-[#D4A017]"/>
  </div>
  )
  }
 
  const statCards = [
  { icon: Users, label:"Total Users", value: stats?.totalUsers?.toLocaleString() ||"0", color:"text-blue-500", bg:"bg-blue-50"},
- { icon: Store, label:"Total Sellers", value: stats?.totalSellers?.toLocaleString() ||"0", color:"text-purple-500", bg:"bg-purple-50"},
+ { icon: Store, label:"Total Sellers", value: stats?.totalSellers?.toLocaleString() ||"0", color:"text-[#0F172A]", bg:"bg-[#0F172A]/10"},
  { icon: ShoppingBag, label:"Transaksi", value: stats?.totalTransactions?.toLocaleString() ||"0", color:"text-emerald-500", bg:"bg-emerald-50"},
- { icon: DollarSign, label:"GMV", value: stats ? formatRupiah(stats.gmv) :"Rp 0", color:"text-violet-500", bg:"bg-violet-50"},
+ { icon: DollarSign, label:"GMV", value: stats ? formatRupiah(stats.gmv) :"Rp 0", color:"text-[#D4A017]", bg:"bg-[#FFD700]/10"},
  ]
 
  return (
@@ -125,9 +125,11 @@ export default function AdminDashboardPage() {
  <p className="text-xs text-slate-500">{stats?.pendingSellerApps || 0} aplikasi menunggu review</p>
  </div>
  </div>
+ <Link href="/admin/sellers">
  <Button variant="outline"size="sm"className="w-full gap-2">
- Review <ArrowRight className="h-3 w-3"/>
+ Review Sekarang <ArrowRight className="h-3 w-3"/>
  </Button>
+ </Link>
  </CardContent>
  </Card>
  </div>

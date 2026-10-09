@@ -10,6 +10,8 @@ export interface User {
   role: "user" | "seller" | "admin" | "owner"
   isVerified: boolean
   createdAt: string
+  sellerApplicationStatus?: "none" | "pending" | "approved" | "rejected"
+  sellerApplicationNotes?: string | null
 }
 
 interface AuthState {

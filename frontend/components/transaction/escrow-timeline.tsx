@@ -17,14 +17,14 @@ const steps: EscrowStep[] = [
  },
  {
  key:"paid",
- label:"Pembayaran Escrow",
- description:"Dana masuk ke rekening escrow",
+  label: "Pembayaran Diterima",
+  description: "Dana diamankan oleh LapakRo",
  icon: <CreditCard className="h-5 w-5"/>,
  },
  {
  key:"delivered",
  label:"Seller Kirim",
- description:"Seller mengirim produk/jasa",
+ description: "Penjual memproses pesanan",
  icon: <PackageCheck className="h-5 w-5"/>,
  },
  {
@@ -36,7 +36,7 @@ const steps: EscrowStep[] = [
  {
  key:"completed",
  label:"Selesai",
- description:"Dana dilepaskan ke seller",
+ description: "Dana diteruskan ke penjual",
  icon: <Check className="h-5 w-5"/>,
  },
 ]
@@ -55,7 +55,7 @@ export function EscrowTimeline({ currentStatus, isDispute }: EscrowTimelineProps
  {isDispute && (
  <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
  <AlertTriangle className="h-5 w-5 shrink-0"/>
- <span>Transaksi ini sedang dalam dispute</span>
+ <span>Transaksi ini sedang dalam peninjauan bantuan / komplain</span>
  </div>
  )}
  <div className="relative">
@@ -69,7 +69,7 @@ export function EscrowTimeline({ currentStatus, isDispute }: EscrowTimelineProps
  className={cn("flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
  isCompleted
  ?"border-emerald-500 bg-emerald-500 text-white": isCurrent
- ?"border-violet-500 bg-violet-50 text-violet-500":"border-slate-300 bg-white text-slate-400")}
+ ?"border-[#D4A017] bg-[#FFD700]/10 text-[#D4A017]":"border-slate-300 bg-white text-slate-400")}
  >
  {isCompleted ? (
  <Check className="h-4 w-4"/>
@@ -90,7 +90,7 @@ export function EscrowTimeline({ currentStatus, isDispute }: EscrowTimelineProps
  className={cn("text-sm font-medium",
  isCompleted
  ?"text-emerald-600": isCurrent
- ?"text-violet-600":"text-slate-500")}
+ ?"text-[#A67C0A]":"text-slate-500")}
  >
  {step.label}
  </p>

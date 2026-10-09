@@ -1,6 +1,6 @@
 "use client"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
  ShoppingCart,
  MessageCircle,
@@ -19,15 +19,108 @@ import {
  TrendingUp,
  Home,
  Grid,
+ Store,
 } from "lucide-react"
 import { hasSufficientRole } from "@/lib/roles"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuthStore } from "@/lib/store"
 import { cn, getInitials, formatRupiah } from "@/lib/utils"
 import { RobuxCoin } from "@/components/ui/robux-decorations"
+
+interface NavLinkItem {
+  href: string
+  label: string
+}
+
+function DesktopNav({ navLinks }: { navLinks: NavLinkItem[] }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const isLinkActive = (link: NavLinkItem) => {
+    const [targetPath, targetQueryString] = link.href.split("?")
+
+    if (targetQueryString) {
+      if (pathname !== targetPath) return false
+      const targetParams = new URLSearchParams(targetQueryString)
+      for (const [key, value] of targetParams.entries()) {
+        if (searchParams.get(key) !== value) {
+          return false
+        }
+      }
+      return true
+    }
+
+    if (pathname === targetPath || (targetPath !== "/" && pathname.startsWith(targetPath + "/"))) {
+      if (targetPath === "/products") {
+        const currentCategory = searchParams.get("category")
+        if (currentCategory && ["gamepass", "robux"].includes(currentCategory)) {
+          return false
+        }
+      }
+      return true
+    }
+
+    return false
+  }
+
+  return (
+    <nav className="hidden lg:flex items-center gap-6 ml-6 h-full">
+      {navLinks.map((link) => {
+        const isActive = isLinkActive(link)
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={cn(
+              "relative flex items-center h-full text-[15px] font-semibold transition-colors duration-200",
+              isActive
+                ? "text-[#111827]"
+                : "text-[#6B7280] hover:text-[#111827]"
+            )}
+          >
+            {link.label}
+            {isActive && (
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full bg-gradient-to-r from-[#FFD700] to-[#FFB800] animate-scale-in" />
+            )}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
+function DesktopNavFallback({ navLinks }: { navLinks: NavLinkItem[] }) {
+  const pathname = usePathname()
+
+  return (
+    <nav className="hidden lg:flex items-center gap-6 ml-6 h-full">
+      {navLinks.map((link) => {
+        const isActive = pathname === link.href && !link.href.includes("?")
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={cn(
+              "relative flex items-center h-full text-[15px] font-semibold transition-colors duration-200",
+              isActive
+                ? "text-[#111827]"
+                : "text-[#6B7280] hover:text-[#111827]"
+            )}
+          >
+            {link.label}
+            {isActive && (
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full bg-gradient-to-r from-[#FFD700] to-[#FFB800]" />
+            )}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
 export function Header() {
  const pathname = usePathname()
  const router = useRouter()
@@ -121,26 +214,10 @@ export function Header() {
  </span>
  </Link>
 
- {/* Desktop Nav Links */}
- <nav className="hidden lg:flex items-center gap-6 ml-6 h-full">
- {navLinks.map((link) => {
- const isActive = pathname === link.href || (link.href !=="/"&& pathname.startsWith(link.href.split('?')[0] +"/") && !link.href.includes('?'))
- return (
- <Link
- key={link.href}
- href={link.href}
- className={cn("relative flex items-center h-full text-[15px] font-semibold transition-colors duration-200",
- isActive
- ?"text-[#111827]":"text-[#6B7280] hover:text-[#111827] :text-white")}
- >
- {link.label}
- {isActive && (
- <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-t-full bg-gradient-to-r from-[#FFD700] to-[#FFB800] animate-scale-in"/>
- )}
- </Link>
- )
- })}
- </nav>
+        {/* Desktop Nav Links */}
+        <Suspense fallback={<DesktopNavFallback navLinks={navLinks} />}>
+          <DesktopNav navLinks={navLinks} />
+        </Suspense>
 
  {/* Search Bar */}
  <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-[500px] ml-auto lg:ml-8 mr-4">
@@ -155,7 +232,7 @@ export function Header() {
  onChange={(e) => setSearchQuery(e.target.value)}
  onFocus={() => setSearchFocused(true)}
  onBlur={() => setSearchFocused(false)}
- placeholder="Cari Robux, Game Pass, item..."className="w-full h-11 rounded-2xl border border-[#EAEAEA] bg-[#F5F5F5] pl-10 pr-12 text-[14px] text-[#111827] placeholder:text-[#6B7280] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#FFD700] focus:border-transparent :bg-white transition-all shadow-inner"/>
+  placeholder="Cari Robux, Game Pass, item..."className="w-full h-11 rounded-2xl border border-[#EAEAEA] bg-[#F5F5F5] pl-10 pr-12 text-[14px] text-[#111827] placeholder:text-[#6B7280] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#FFD700] focus:border-transparent transition-all shadow-inner"/>
  <div className="absolute inset-y-0 right-0 flex items-center pr-2">
  <div className="flex h-6 items-center rounded-lg border border-[#EAEAEA] bg-white px-2 text-[10px] font-semibold text-[#6B7280] shadow-sm">
  ⌘K
@@ -169,7 +246,7 @@ export function Header() {
  {/* Wallet Preview (Desktop) */}
  {mounted && isAuthenticated && (
  <Link
- href="/wallet"className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#EAEAEA] bg-white hover:bg-[#F5F5F5] hover:border-[#D1D5DB] transition-all :bg-[#252540] mr-2">
+  href="/wallet"className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#EAEAEA] bg-white hover:bg-[#F5F5F5] hover:border-[#D1D5DB] transition-all mr-2">
  <Wallet className="h-4 w-4 text-[#D4A017]"/>
  <span className="text-sm font-bold text-[#111827]">
  {formatRupiah(walletBalance)}
@@ -181,12 +258,12 @@ export function Header() {
  {mounted && isAuthenticated && (
  <div className="hidden sm:flex items-center gap-1">
  <Link
- href="/chat"className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors :bg-[#F5F5F5] :text-white">
+  href="/chat"className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors">
  <MessageSquare className="h-5 w-5"/>
  <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-[#EF4444] border-2 border-white"/>
  </Link>
  <button
- className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors :bg-[#F5F5F5] :text-white">
+  className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors">
  <Bell className="h-5 w-5"/>
  </button>
  <div className="h-6 w-px bg-[#EAEAEA] mx-1"/>
@@ -202,7 +279,7 @@ export function Header() {
  onClick={() => setUserMenuOpen(!userMenuOpen)}
  className={cn("flex items-center gap-2 rounded-full p-1 pr-3 border transition-all hover-lift",
  userMenuOpen
- ?"bg-white border-[#D1D5DB] shadow-sm":"bg-[#F5F5F5] border-transparent hover:bg-white hover:border-[#EAEAEA] :bg-[#252540] :border-[#EAEAEA]")}
+  ?"bg-white border-[#D1D5DB] shadow-sm":"bg-[#F5F5F5] border-transparent hover:bg-white hover:border-[#EAEAEA]")}
  >
  <div className="relative">
  <Avatar className="h-8 w-8 border border-[#EAEAEA]">
@@ -253,7 +330,7 @@ export function Header() {
  <Link
  key={item.href}
  href={item.href}
- className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors :bg-[#F5F5F5] :text-white"onClick={() => setUserMenuOpen(false)}
+  className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#6B7280] hover:bg-[#F5F5F5] hover:text-[#111827] transition-colors"onClick={() => setUserMenuOpen(false)}
  >
  <Icon className="h-4 w-4"/>
  {item.label}
@@ -281,7 +358,7 @@ export function Header() {
  setUserMenuOpen(false)
  router.push("/")
  }}
- className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#EF4444] hover:bg-[#FEE2E2] transition-colors :bg-[rgba(239,68,68,0.1)]">
+  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-[#EF4444] hover:bg-[#FEE2E2] transition-colors">
  <LogOut className="h-4 w-4"/>
  Keluar
  </button>
@@ -309,7 +386,7 @@ export function Header() {
  <div className="flex items-center justify-around h-16 px-2">
  {mobileNavLinks.map((link) => {
  const Icon = link.icon
- const isActive = pathname === link.href || (link.href !=="/"&& pathname.startsWith(link.href))
+  const isActive = pathname === link.href || (link.href !=="/"&& (pathname.startsWith(link.href +"/") || pathname.startsWith(link.href +"?")))
  return (
  <Link
  key={link.href}

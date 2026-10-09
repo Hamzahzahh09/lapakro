@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { api } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import { useAuthStore } from "@/lib/store"
 import { hasSufficientRole } from "@/lib/roles"
 import { Button } from "@/components/ui/button"
@@ -85,10 +85,18 @@ export default function EditProductPage() {
  stock: Number(form.stock) || 1,
  })
  router.push("/seller/products")
- } catch (err: unknown) {
- const e = err as { response?: { data?: { error?: { message?: string | string[] } } } };
- const msg = e.response?.data?.error?.message || "Gagal menyimpan"
- setError(Array.isArray(msg) ? msg.join(",") : msg)
+  } catch (err: unknown) {
+  let msg: string | string[] = "Gagal menyimpan"
+  if (err instanceof ApiError) {
+  const data = err.data as
+  | { error?: { message?: string | string[] }; message?: string | string[] }
+  | null
+  | undefined
+  msg = data?.error?.message || data?.message || err.message || msg
+  } else if (err instanceof Error) {
+  msg = err.message
+  }
+  setError(Array.isArray(msg) ? msg.join(", ") : msg)
  } finally {
  setLoading(false)
  }
@@ -97,7 +105,7 @@ export default function EditProductPage() {
  if (fetching) {
  return (
  <div className="flex items-center justify-center min-h-[60vh]">
- <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"/>
+ <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#D4A017]"/>
  </div>
  )
  }
@@ -143,7 +151,7 @@ export default function EditProductPage() {
  onChange={(e) => setForm({ ...form, description: e.target.value })}
  placeholder="Deskripsikan produk Anda..."rows={5}
  required
- className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"/>
+ className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-[#D4A017]"/>
  </div>
 
  <div className="grid gap-4 sm:grid-cols-2">

@@ -66,8 +66,8 @@ export default function LoginPage() {
  <ShieldCheck className="h-5 w-5"/>
  </div>
  <div>
- <p className="font-bold text-[#0F172A] text-sm">Escrow 100% Aman</p>
- <p className="text-xs text-[#6B7280]">Dana ditahan hingga pesanan selesai</p>
+ <p className="font-bold text-[#0F172A] text-sm">Transaksi 100% Aman</p>
+ <p className="text-xs text-[#6B7280]">Garansi dana terlindungi hingga pesanan selesai</p>
  </div>
  </div>
  <div className="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-2xl p-4">

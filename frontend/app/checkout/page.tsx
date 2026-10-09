@@ -1,25 +1,30 @@
 "use client"
 import { useState } from "react"
-import { ShieldCheck, CreditCard, ShoppingBag, ArrowRight, Smartphone } from "lucide-react"
+import { ShieldCheck, CreditCard, ShoppingBag, ArrowRight, Smartphone, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatRupiah } from "@/lib/utils"
 import { useCartStore } from "@/lib/store"
+import { useAuth } from "@/hooks/use-auth"
+import { api } from "@/lib/api"
 import Link from "next/link"
 import { EmptyState } from "@/components/ui/empty-state"
 
 const PAYMENT_METHODS = [
-  { id: "bca", name: "Bank BCA", icon: "BCA", color: "text-blue-600", bg: "bg-blue-50" },
-  { id: "mandiri", name: "Bank Mandiri", icon: "Mandiri", color: "text-blue-700", bg: "bg-blue-50" },
-  { id: "bni", name: "Bank BNI", icon: "BNI", color: "text-orange-600", bg: "bg-orange-50" },
-  { id: "bri", name: "Bank BRI", icon: "BRI", color: "text-blue-600", bg: "bg-blue-50" },
+  { id: "bca_va", name: "Bank BCA", icon: "BCA", color: "text-blue-600", bg: "bg-blue-50" },
+  { id: "mandiri_va", name: "Bank Mandiri", icon: "Mandiri", color: "text-blue-700", bg: "bg-blue-50" },
+  { id: "bni_va", name: "Bank BNI", icon: "BNI", color: "text-orange-600", bg: "bg-orange-50" },
+  { id: "bri_va", name: "Bank BRI", icon: "BRI", color: "text-blue-600", bg: "bg-blue-50" },
   { id: "qris", name: "QRIS", icon: <Smartphone className="h-5 w-5 text-green-600" />, color: "text-green-600", bg: "bg-green-50" },
   { id: "gopay", name: "GoPay", icon: "GoPay", color: "text-green-500", bg: "bg-green-50" },
 ]
 
 export default function CheckoutPage() {
-  const { items, totalPrice } = useCartStore()
-  const [selectedMethod, setSelectedMethod] = useState("bca")
+  const { items, totalPrice, clearCart } = useCartStore()
+  const { user } = useAuth()
+  const [selectedMethod, setSelectedMethod] = useState("bca_va")
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [errorMsg, setErrorMsg] = useState("")
   const serviceFee = items.length > 0 ? 2500 : 0
   const total = totalPrice()
 
@@ -37,6 +42,40 @@ export default function CheckoutPage() {
         </div>
       </div>
     )
+  }
+
+  const handlePayNow = async () => {
+    if (!user) return
+    setIsProcessing(true)
+    setErrorMsg("")
+    try {
+      const description = items.map((i) => `${i.title} x${i.quantity}`).join(", ")
+      const res = await api.post<{ success: boolean; data: { paymentUrl: string; snapToken: string } }>(
+        "/payment/create",
+        {
+          amount: total + serviceFee,
+          method: selectedMethod,
+          description,
+          customerDetails: {
+            name: user.name,
+            email: user.email,
+          },
+        }
+      )
+
+      if (res.success && res.data.paymentUrl) {
+        // Redirect ke halaman pembayaran Midtrans
+        clearCart()
+        window.location.href = res.data.paymentUrl
+      } else {
+        setErrorMsg("Gagal membuat pembayaran, coba lagi.")
+      }
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      setErrorMsg(error?.message || "Gagal membuat pembayaran, coba lagi.")
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (
@@ -127,14 +166,30 @@ export default function CheckoutPage() {
 
                 <div className="flex items-start gap-2 mb-6 p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs text-[#6B7280]">
                   <ShieldCheck className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                  <p>Transaksi aman. Dana akan diteruskan ke penjual setelah pesanan selesai.</p>
+                  <p>Transaksi aman menggunakan Midtrans. Dana akan diteruskan ke penjual setelah pesanan selesai.</p>
                 </div>
 
-                <Link href="/transactions">
-                  <Button variant="gold" className="w-full shadow-md font-bold" size="lg">
-                    Bayar Sekarang <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                {errorMsg && (
+                  <p className="text-sm text-red-500 mb-3 text-center">{errorMsg}</p>
+                )}
+
+                <Button
+                  variant="gold"
+                  className="w-full shadow-md font-bold"
+                  size="lg"
+                  onClick={handlePayNow}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
+                  ) : (
+                    <>Bayar Sekarang <ArrowRight className="ml-2 h-4 w-4" /></>
+                  )}
+                </Button>
+
+                <p className="text-center text-xs text-[#6B7280] mt-3">
+                  Anda akan diarahkan ke halaman pembayaran Midtrans
+                </p>
               </CardContent>
             </Card>
           </div>

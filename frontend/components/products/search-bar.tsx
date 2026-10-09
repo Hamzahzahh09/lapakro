@@ -62,7 +62,7 @@ export function SearchBar({
  onFocus={() => setShowSuggestions(true)}
  placeholder={placeholder}
  autoFocus={autoFocus}
- className="w-full h-10 rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"/>
+ className="w-full h-10 rounded-lg border border-slate-300 bg-white pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-[#D4A017]"/>
  </div>
  </form>
  {showSuggestions && filteredSuggestions.length > 0 && (

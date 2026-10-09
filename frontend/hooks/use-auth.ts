@@ -74,6 +74,18 @@ export function useAuth() {
     []
   )
 
+  const refreshProfile = useCallback(async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: User }>("/users/profile")
+      if (res.data) {
+        setUser(res.data)
+        return res.data
+      }
+    } catch {
+      // ignore
+    }
+  }, [setUser])
+
   return {
     user,
     token,
@@ -83,6 +95,7 @@ export function useAuth() {
     logout: logoutAction,
     verifyOtp: verifyOtpAction,
     sendOtp: sendOtpAction,
+    refreshProfile,
     setUser,
   }
 }

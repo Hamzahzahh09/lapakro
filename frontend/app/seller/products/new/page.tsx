@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { api } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import { useAuthStore } from "@/lib/store"
 import { hasSufficientRole } from "@/lib/roles"
 import { Button } from "@/components/ui/button"
@@ -91,10 +91,18 @@ export default function NewProductPage() {
   router.push("/seller/products")
   }
   } catch (err: unknown) {
-  const apiErr = err as { response?: { data?: { error?: { message?: string | string[] } } } }
-  const msg = apiErr.response?.data?.error?.message || "Gagal menambahkan produk"
+  let msg: string | string[] = "Gagal menambahkan produk"
+  if (err instanceof ApiError) {
+  const data = err.data as
+  | { error?: { message?: string | string[] }; message?: string | string[] }
+  | null
+  | undefined
+  msg = data?.error?.message || data?.message || err.message || msg
+  } else if (err instanceof Error) {
+  msg = err.message
+  }
 
-  setError(Array.isArray(msg) ? msg.join(",") : msg)
+  setError(Array.isArray(msg) ? msg.join(", ") : msg)
  } finally {
  setLoading(false)
  }
@@ -143,7 +151,7 @@ export default function NewProductPage() {
  placeholder="Deskripsikan produk Anda (minimal 10 karakter)..."rows={5}
  required
  minLength={10}
- className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"/>
+ className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-[#D4A017]"/>
  </div>
 
  <div className="grid gap-4 sm:grid-cols-2">

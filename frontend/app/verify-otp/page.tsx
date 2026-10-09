@@ -82,7 +82,7 @@ export default function VerifyOtpPage() {
  <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
  <Card className="w-full max-w-md">
  <CardHeader className="text-center">
- <Link href="/"className="mx-auto flex items-center justify-center gap-2 text-2xl font-bold text-violet-500">
+ <Link href="/"className="mx-auto flex items-center justify-center gap-2 text-2xl font-bold text-[#D4A017]">
  <Gamepad2 className="h-8 w-8"/>
  LapakRo
  </Link>
@@ -107,7 +107,7 @@ export default function VerifyOtpPage() {
  value={digit}
  onChange={(e) => handleChange(index, e.target.value)}
  onKeyDown={(e) => handleKeyDown(index, e)}
- className="h-12 w-10 rounded-lg border border-slate-300 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 sm:h-14 sm:w-12"inputMode="numeric"autoComplete="one-time-code"/>
+ className="h-12 w-10 rounded-lg border border-slate-300 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-[#FFD700] focus:border-[#D4A017] sm:h-14 sm:w-12"inputMode="numeric"autoComplete="one-time-code"/>
  ))}
  </div>
  <Button
@@ -124,7 +124,7 @@ export default function VerifyOtpPage() {
  ) : (
  <button
  onClick={resendOtp}
- className="text-xs font-medium text-violet-500 hover:text-violet-600">
+ className="text-xs font-medium text-[#D4A017] hover:text-[#A67C0A]">
  Kirim ulang kode
  </button>
  )}

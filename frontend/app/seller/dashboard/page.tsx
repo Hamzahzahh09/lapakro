@@ -8,28 +8,73 @@ import { useAuth } from "@/hooks/use-auth"
 import { api } from "@/lib/api"
 import { formatRupiah } from "@/lib/utils"
 import Link from "next/link"
-export default function SellerDashboardPage() {
- const { user } = useAuth()
- const [stats, setStats] = useState({
- totalSales: 0,
- totalOrders: 0,
- activeProducts: 0,
- pendingOrders: 0,
- })
- const [loading, setLoading] = useState(true)
+interface DashboardTransaction {
+  id: string
+  status: string
+  totalPrice: number
+  sellerId?: string
+  buyerId?: string
+  createdAt: string
+  product?: { name?: string; title?: string }
+  buyer?: { name?: string }
+  seller?: { name?: string }
+}
 
- useEffect(() => {
- // Simulated fetch
- setTimeout(() => {
- setStats({
- totalSales: 15500000,
- totalOrders: 342,
- activeProducts: 18,
- pendingOrders: 5,
- })
- setLoading(false)
- }, 800)
- }, [])
+interface MineProduct {
+  id: string
+  status: string
+}
+
+export default function SellerDashboardPage() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState({
+  totalSales: 0,
+  totalOrders: 0,
+  activeProducts: 0,
+  pendingOrders: 0,
+  })
+  const [recentOrders, setRecentOrders] = useState<DashboardTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+  let cancelled = false
+  const load = async () => {
+  try {
+  const [trxRes, prodRes] = await Promise.all([
+  api.get<{ success: boolean; data: DashboardTransaction[]; total?: number }>(
+  "/transactions",
+  { params: { page: 1, limit: 100 } }
+  ),
+  api.get<{ success: boolean; data: MineProduct[] }>("/products/mine"),
+  ])
+  if (cancelled) return
+  const allTrx = trxRes.data || []
+  // Hanya hitung sebagai seller (pesanan masuk ke toko saya)
+  const mySales = user?.id
+  ? allTrx.filter((t) => t.sellerId === user.id)
+  : allTrx
+  const pending = mySales.filter((t) => t.status === "pending")
+  const completed = mySales.filter((t) => t.status === "completed")
+  const totalSales = completed.reduce((sum, t) => sum + (t.totalPrice || 0), 0)
+  const products = prodRes.data || []
+  const activeProducts = products.filter((p) => p.status === "active").length
+  setStats({
+  totalSales,
+  totalOrders: mySales.length,
+  activeProducts,
+  pendingOrders: pending.length,
+  })
+  setRecentOrders(mySales.slice(0, 4))
+  } catch {
+  // Biarkan 0 jika API gagal, jangan tampilkan angka palsu
+  if (!cancelled) setRecentOrders([])
+  } finally {
+  if (!cancelled) setLoading(false)
+  }
+  }
+  load()
+  return () => { cancelled = true }
+  }, [user?.id])
 
  return (
  <div className="p-4 sm:p-6 lg:p-8 space-y-8 bg-[#F8FAFC]">
@@ -72,55 +117,44 @@ export default function SellerDashboardPage() {
  {/* Stats Grid */}
  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
  {[
- {
- title:"Total Pendapatan",
- value: formatRupiah(stats.totalSales),
- icon: Wallet,
- trend:"+12.5%",
- trendUp: true,
- color:"text-[#22C55E]",
- bg:"bg-[#22C55E]/10",
- },
- {
- title:"Total Pesanan",
- value: stats.totalOrders.toLocaleString('id-ID'),
- icon: ShoppingBag,
- trend:"+8.2%",
- trendUp: true,
- color:"text-[#3B82F6]",
- bg:"bg-[#3B82F6]/10",
- },
- {
- title:"Produk Aktif",
- value: stats.activeProducts,
- icon: Package,
- trend:"0%",
- trendUp: true,
- color:"text-[#8B5CF6]",
- bg:"bg-[#8B5CF6]/10",
- },
- {
- title:"Pesanan Menunggu",
- value: stats.pendingOrders,
- icon: AlertCircle,
- trend:"-2",
- trendUp: false,
- color:"text-[#F59E0B]",
- bg:"bg-[#F59E0B]/10",
- },
- ].map((stat, i) => {
- const Icon = stat.icon
- return (
- <Card key={i} className="bg-white border border-gray-100 shadow-sm border-t-4 hover:-translate-y-1 transition-transform duration-300"style={{ borderTopColor: i === 0 ?'#22C55E': i === 1 ?'#3B82F6': i === 2 ?'#8B5CF6':'#F59E0B'}}>
- <CardContent className="p-6">
- <div className="flex items-center justify-between mb-4">
- <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg}`}>
- <Icon className={`h-6 w-6 ${stat.color}`} />
- </div>
- <Badge variant={stat.trendUp ?"success":"warning"} className="font-bold">
- {stat.trend}
- </Badge>
- </div>
+  {
+  title:"Total Pendapatan",
+  value: formatRupiah(stats.totalSales),
+  icon: Wallet,
+  color:"text-[#22C55E]",
+  bg:"bg-[#22C55E]/10",
+  },
+  {
+  title:"Total Pesanan",
+  value: stats.totalOrders.toLocaleString('id-ID'),
+  icon: ShoppingBag,
+  color:"text-[#3B82F6]",
+  bg:"bg-[#3B82F6]/10",
+  },
+  {
+  title:"Produk Aktif",
+  value: stats.activeProducts,
+  icon: Package,
+color:"text-[#0F172A]",
+bg:"bg-[#0F172A]/10",
+  },
+  {
+  title:"Pesanan Menunggu",
+  value: stats.pendingOrders,
+  icon: AlertCircle,
+  color:"text-[#F59E0B]",
+  bg:"bg-[#F59E0B]/10",
+  },
+  ].map((stat, i) => {
+  const Icon = stat.icon
+  return (
+  <Card key={i} className="bg-white border border-gray-100 shadow-sm border-t-4 hover:-translate-y-1 transition-transform duration-300"style={{ borderTopColor: i === 0 ?'#22C55E': i === 1 ?'#3B82F6': i === 2 ?'#0F172A':'#F59E0B'}}>
+  <CardContent className="p-6">
+  <div className="flex items-center justify-between mb-4">
+  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg}`}>
+  <Icon className={`h-6 w-6 ${stat.color}`} />
+  </div>
+  </div>
  <div>
  <p className="text-sm font-bold text-[#6B7280] mb-1">{stat.title}</p>
  {loading ? (
@@ -155,28 +189,42 @@ export default function SellerDashboardPage() {
  {/* Recent Orders List */}
  <Card className="md:col-span-2 lg:col-span-3 bg-white border border-gray-100 shadow-sm">
  <CardHeader className="flex flex-row items-center justify-between">
- <CardTitle className="text-lg text-[#0F172A]">Pesanan Terbaru</CardTitle>
- <Button variant="ghost"size="sm"className="text-[#D4A017] hover:text-[#FFB800] hover:bg-[#FFFBEB]">Lihat Semua</Button>
+  <CardTitle className="text-lg text-[#0F172A]">Pesanan Terbaru</CardTitle>
+  <Link href="/transactions">
+  <Button variant="ghost"size="sm"className="text-[#D4A017] hover:text-[#FFB800] hover:bg-[#FFFBEB]">Lihat Semua</Button>
+  </Link>
  </CardHeader>
- <CardContent>
- <div className="space-y-4">
- {[1, 2, 3, 4].map((i) => (
- <div key={i} className="flex items-center gap-4 rounded-2xl border border-gray-100 p-3 hover:border-[#FFD700] transition-colors bg-white">
- <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] shrink-0 opacity-20"/>
- <div className="flex-1 min-w-0">
- <p className="text-sm font-bold text-[#0F172A] truncate">Akun Blox Fruits Max Level</p>
- <p className="text-xs text-[#6B7280] mt-0.5">Pembeli: User{i}123</p>
- </div>
- <div className="text-right shrink-0">
- <Badge variant={i === 1 ?"warning":"success"} className="mb-1 block w-fit ml-auto">
- {i === 1 ?"Menunggu":"Selesai"}
- </Badge>
- <p className="text-xs font-bold text-[#0F172A]">Rp 150.000</p>
- </div>
- </div>
- ))}
- </div>
- </CardContent>
+  <CardContent>
+  {loading ? (
+  <div className="space-y-4">
+  {[1, 2, 3].map((i) => (
+  <div key={i} className="h-20 rounded-2xl bg-gray-100 animate-pulse" />
+  ))}
+  </div>
+  ) : recentOrders.length === 0 ? (
+  <div className="py-8 text-center text-sm text-[#6B7280]">
+  Belum ada pesanan masuk.
+  </div>
+  ) : (
+  <div className="space-y-4">
+  {recentOrders.map((trx) => (
+  <div key={trx.id} className="flex items-center gap-4 rounded-2xl border border-gray-100 p-3 hover:border-[#FFD700] transition-colors bg-white">
+  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#D4A017] shrink-0 opacity-20"/>
+  <div className="flex-1 min-w-0">
+  <p className="text-sm font-bold text-[#0F172A] truncate">{trx.product?.title || trx.product?.name || "Produk"}</p>
+  <p className="text-xs text-[#6B7280] mt-0.5">Pembeli: {trx.buyer?.name || "-"}</p>
+  </div>
+  <div className="text-right shrink-0">
+  <Badge variant={trx.status === "completed" ? "success" : trx.status === "cancelled" ? "destructive" : "warning"} className="mb-1 block w-fit ml-auto">
+  {trx.status === "pending" ? "Menunggu" : trx.status === "awaiting_buyer" ? "Diproses" : trx.status === "completed" ? "Selesai" : trx.status}
+  </Badge>
+  <p className="text-xs font-bold text-[#0F172A]">{formatRupiah(trx.totalPrice)}</p>
+  </div>
+  </div>
+  ))}
+  </div>
+  )}
+  </CardContent>
  </Card>
  </div>
  </div>

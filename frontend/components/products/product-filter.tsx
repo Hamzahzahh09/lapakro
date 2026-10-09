@@ -66,7 +66,7 @@ export function ProductFilter({ onFilterChange }: ProductFilterProps) {
  </h3>
  <button
  onClick={clearFilters}
- className="text-xs text-violet-500 hover:text-violet-600">
+ className="text-xs text-[#D4A017] hover:text-[#A67C0A]">
  Reset
  </button>
  </div>
@@ -83,7 +83,7 @@ export function ProductFilter({ onFilterChange }: ProductFilterProps) {
  <input
  type="checkbox"checked={selectedCategories.includes(cat.id)}
  onChange={() => toggleCategory(cat.id)}
- className="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-500"/>
+ className="h-4 w-4 rounded border-slate-300 text-[#D4A017] focus:ring-[#FFD700]"/>
  <span className="text-sm text-slate-600">
  {cat.label}
  </span>
@@ -120,7 +120,7 @@ export function ProductFilter({ onFilterChange }: ProductFilterProps) {
  onClick={() => setMinRating(star.toString())}
  className={`h-8 w-8 rounded-lg text-sm font-medium transition-colors ${
  minRating === star.toString()
- ?"bg-violet-500 text-white":"bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+ ?"bg-[#D4A017] text-white":"bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
  >
  {star}
  </button>

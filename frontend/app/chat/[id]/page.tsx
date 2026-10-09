@@ -1,38 +1,28 @@
-"use client"
-import { useParams } from "next/navigation"
-import { ChatWindow } from "@/components/chat/chat-window"
-import type { Message } from "@/lib/store"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
-const messages: Message[] = [
- { id: "1", chatId:"1", senderId:"seller1", text:"Halo kak, ada yang bisa dibantu?", createdAt:"2024-06-10T09:55:00Z"},
- { id: "2", chatId:"1", senderId:"user1", text:"Halo, saya mau order Robux 1000", createdAt:"2024-06-10T10:00:00Z"},
- { id: "3", chatId:"1", senderId:"seller1", text:"Baik kak, silakan langsung order saja ya", createdAt:"2024-06-10T10:01:00Z"},
- { id: "4", chatId:"1", senderId:"seller1", text:"Nanti akan diproses max 10 menit", createdAt:"2024-06-10T10:01:30Z"},
-]
+"use client";
 
-const chatUsers: Record<string, { name: string }> = {"1": { name: "RobuxPrime"},"2": { name: "GameMaster"},"3": { name: "ItemHunter"},"4": { name: "BoostPro"},
-}
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 
 export default function ChatDetailPage() {
- const params = useParams()
- const chatId = params.id as string
- const userInfo = chatUsers[chatId] || { name: "Unknown"}
+  const params = useParams();
+  const router = useRouter();
 
- return (
- <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
- <Link
- href="/chat"className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 mb-4">
- <ChevronLeft className="h-4 w-4"/>
- Kembali
- </Link>
- <div className="rounded-xl border border-slate-200 overflow-hidden h-[600px]">
- <ChatWindow
- messages={messages}
- onSendMessage={(text) => console.log("Send:", text)}
- userName={userInfo.name}
- currentUserId="user1"/>
- </div>
- </div>
- )
+  useEffect(() => {
+    if (params?.id) {
+      router.replace(`/chat?id=${params.id}`);
+    } else {
+      router.replace("/chat");
+    }
+  }, [params, router]);
+
+  return (
+    <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-slate-50">
+      <div className="text-center space-y-2">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#FFD700] border-r-transparent align-[-0.125em]" />
+        <p className="text-sm font-medium text-slate-600">
+          Mengalihkan ke percakapan...
+        </p>
+      </div>
+    </div>
+  );
 }

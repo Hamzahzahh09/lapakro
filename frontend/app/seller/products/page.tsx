@@ -66,7 +66,7 @@ export default function SellerProductsPage() {
  if (loading) {
  return (
  <div className="flex items-center justify-center min-h-[60vh]">
- <Loader2 className="h-8 w-8 animate-spin text-violet-500"/>
+ <Loader2 className="h-8 w-8 animate-spin text-[#D4A017]"/>
  </div>
  )
  }
@@ -118,7 +118,7 @@ export default function SellerProductsPage() {
  <span>{product.soldCount} terjual</span>
  <span>Sisa: {product.stock}</span>
  </div>
- <p className="mt-1 text-sm font-bold text-violet-500">
+ <p className="mt-1 text-sm font-bold text-[#D4A017]">
  {formatRupiah(product.price)}
  </p>
  </div>

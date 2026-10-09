@@ -60,7 +60,15 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
     }
     const message =
       (errorData as { message?: string })?.message ||
+      (errorData as { error?: string })?.error ||
       `Request failed with status ${response.status}`
+      
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem("auth_token")
+      localStorage.removeItem("auth-storage")
+      window.location.href = "/login"
+    }
+
     throw new ApiError(message, response.status, errorData)
   }
 

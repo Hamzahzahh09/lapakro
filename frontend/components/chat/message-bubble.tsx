@@ -12,12 +12,12 @@ export function MessageBubble({ text, createdAt, isOwn }: MessageBubbleProps) {
  <div
  className={cn("max-w-[75%] rounded-2xl px-4 py-2.5",
  isOwn
- ?"bg-violet-500 text-white rounded-br-md":"bg-slate-100 text-slate-900 rounded-bl-md")}
+ ?"bg-[#D4A017] text-white rounded-br-md":"bg-slate-100 text-slate-900 rounded-bl-md")}
  >
  <p className="text-sm">{text}</p>
  <p
  className={cn("mt-1 text-[10px]",
- isOwn ?"text-violet-100":"text-slate-400")}
+ isOwn ?"text-[#FFFBEB]":"text-slate-400")}
  >
  {formatDate(createdAt)}
  </p>

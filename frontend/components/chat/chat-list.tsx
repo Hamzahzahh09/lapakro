@@ -26,7 +26,7 @@ export function ChatList({ chats }: ChatListProps) {
  key={chat.id}
  href={`/chat/${chat.id}`}
  className={cn("flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 :bg-slate-800",
- isActive &&"bg-violet-50")}
+ isActive &&"bg-[#FFD700]/10")}
  >
  <Avatar className="h-10 w-10 shrink-0">
  <AvatarFallback>{getInitials(chat.userName)}</AvatarFallback>
@@ -47,7 +47,7 @@ export function ChatList({ chats }: ChatListProps) {
  </p>
  </div>
  {chat.unread > 0 && (
- <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500 text-[10px] font-medium text-white">
+ <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D4A017] text-[10px] font-medium text-white">
  {chat.unread}
  </span>
  )}

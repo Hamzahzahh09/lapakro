@@ -19,7 +19,7 @@ export function ProductCard({ product }: ProductCardProps) {
  case"gamepass":
  return"from-[#3B82F6] to-[#2563EB]"// Blue
  case"avatar":
- return"from-[#A855F7] to-[#7E22CE]"// Purple
+ return"from-[#FFD700] to-[#D4A017]"// Gold
  default:
  return"from-gray-200 to-gray-300"// Light gray fallback
  }

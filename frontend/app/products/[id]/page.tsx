@@ -16,6 +16,13 @@ interface Review {
  createdAt: string
 }
 
+interface Seller {
+ id: string
+ name: string
+ photo: string
+ sellerApplicationStatus: string
+}
+
 interface ProductDetail {
  id: string
  title: string
@@ -24,6 +31,7 @@ interface ProductDetail {
  description: string
  images: string[]
  sellerId: string
+ seller?: Seller
  averageRating: number
  reviewCount: number
  soldCount: number
@@ -61,22 +69,39 @@ export default function ProductDetailPage() {
   return () => { cancelled = true }
   }, [params?.id])
 
- const handleBuy = () => {
- if (!isAuthenticated || !user) {
- router.push("/login")
- return
- }
- if (!user.isVerified) {
- router.push("/verify-otp")
- return
- }
- router.push(`/transactions/new?productId=${params?.id}&quantity=${quantity}`)
- }
+  const handleBuy = () => {
+  if (!isAuthenticated || !user) {
+   router.push("/login")
+   return
+  }
+  router.push(`/transactions/new?productId=${params?.id}&quantity=${quantity}`)
+  }
+
+  const handleContactSeller = async () => {
+    if (!isAuthenticated || !user) {
+      router.push("/login")
+      return
+    }
+    if (!product?.sellerId) return
+    try {
+      const res = await api.post<{ success: boolean; data: { id: string } }>('/chat/conversation', {
+        sellerId: product.sellerId,
+        productId: product.id,
+      })
+      if (res.data?.id) {
+        router.push(`/chat?id=${res.data.id}`)
+      } else {
+        router.push('/chat')
+      }
+    } catch {
+      router.push('/chat')
+    }
+  }
 
  if (loading) {
  return (
  <div className="flex items-center justify-center min-h-[60vh]">
- <Loader2 className="h-8 w-8 animate-spin text-violet-500"/>
+ <Loader2 className="h-8 w-8 animate-spin text-[#D4A017]"/>
  </div>
  )
  }
@@ -116,7 +141,7 @@ export default function ProductDetailPage() {
  key={i}
  onClick={() => setSelectedImage(i)}
  className={`h-16 w-16 rounded-lg overflow-hidden border-2 ${
- i === selectedImage ?"border-violet-500":"border-transparent"}`}
+ i === selectedImage ?"border-[#D4A017]":"border-transparent"}`}
  >
  {img ? (
  <img src={img} alt=""className="h-full w-full object-cover"/>
@@ -142,7 +167,7 @@ export default function ProductDetailPage() {
  </span>
  </div>
  </div>
- <p className="mt-4 text-3xl font-bold text-violet-500">
+ <p className="mt-4 text-3xl font-bold text-[#D4A017]">
  {formatRupiah(product.price)}
  </p>
  <div className="mt-6 whitespace-pre-line text-sm text-slate-600">
@@ -190,13 +215,49 @@ export default function ProductDetailPage() {
  <div className="space-y-4">
  <Card>
  <CardContent className="p-4 space-y-4">
- <div className="space-y-1.5 text-xs text-slate-500">
- <p>Terjual: {product.soldCount}</p>
- <p>Stok: {product.stock}</p>
- <p>ID Seller: {product.sellerId?.slice(0, 8)}...</p>
- </div>
+  {/* Info Penjual */}
+  <div>
+   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Penjual</p>
+   <div className="flex items-center gap-3">
+    {product.seller?.photo ? (
+     <img
+      src={product.seller.photo}
+      alt={product.seller.name}
+      className="h-10 w-10 rounded-full object-cover border border-slate-200"
+     />
+    ) : (
+     <div className="h-10 w-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center text-[#D4A017] font-bold text-sm">
+      {product.seller?.name?.charAt(0).toUpperCase() || "?"}
+     </div>
+    )}
+    <div>
+     <p className="text-sm font-semibold text-slate-900">
+      {product.seller?.name || "Penjual"}
+     </p>
+     {product.seller?.sellerApplicationStatus === "approved" && (
+      <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+       <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block"/>
+       Seller Terverifikasi
+      </span>
+     )}
+    </div>
+   </div>
+  </div>
+  <div className="border-t border-slate-100 pt-3 space-y-1 text-xs text-slate-500">
+   <p>Terjual: <span className="font-medium text-slate-700">{product.soldCount}</span></p>
+   <p>Stok: <span className="font-medium text-slate-700">{product.stock}</span></p>
+  </div>
+  <Button
+   variant="outline"
+   size="sm"
+   className="w-full gap-2 border-slate-200 text-slate-700 hover:text-slate-900 mt-2"
+   onClick={handleContactSeller}
+  >
+   <MessageCircle className="h-4 w-4" />
+   Chat Penjual
+  </Button>
  </CardContent>
- </Card>
+</Card>
 
  <Card>
  <CardContent className="p-4 space-y-4">
@@ -220,7 +281,7 @@ export default function ProductDetailPage() {
  </div>
  <div className="flex items-center justify-between">
  <span className="text-sm text-slate-500">Subtotal</span>
- <span className="text-lg font-bold text-violet-500">
+ <span className="text-lg font-bold text-[#D4A017]">
  {formatRupiah(product.price * quantity)}
  </span>
  </div>

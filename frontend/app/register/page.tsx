@@ -90,7 +90,7 @@ export default function RegisterPage() {
  </div>
  </div>
  <div className="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-2xl p-4">
- <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8B5CF6]/10 text-[#8B5CF6]">
+ <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFD700]/10 text-[#D4A017]">
  <Store className="h-5 w-5"/>
  </div>
  <div>

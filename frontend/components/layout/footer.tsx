@@ -1,8 +1,18 @@
+"use client"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { ShieldCheck, Zap, HeadphonesIcon, CreditCard } from "lucide-react"
 import { RobuxCoin, FloatingRobux } from "@/components/ui/robux-decorations"
+
 export function Footer() {
- return (
+  const pathname = usePathname()
+
+  // Sembunyikan footer di halaman chat agar layout fullscreen dan scroll tidak bablas
+  if (pathname?.startsWith("/chat")) {
+    return null
+  }
+
+  return (
  <footer className="relative w-full overflow-hidden border-t border-gray-200 bg-white text-[#0F172A] pt-16 pb-24 md:pb-12">
  {/* Decorative background */}
  <div className="absolute inset-0 bg-cubes opacity-30 pointer-events-none"/>
@@ -17,8 +27,8 @@ export function Footer() {
  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700]/20 to-[#FFB800]/10 mb-4 shadow-sm border border-[#FFD700]/10">
  <ShieldCheck className="h-6 w-6 text-[#D4A017]"/>
  </div>
- <h4 className="text-sm font-bold text-[#0F172A] mb-1">Escrow Protected</h4>
- <p className="text-xs text-[#6B7280]">Funds held until delivery</p>
+ <h4 className="text-sm font-bold text-[#0F172A] mb-1">100% Buyer Protection</h4>
+ <p className="text-xs text-[#6B7280]">Dana aman hingga pesanan selesai</p>
  </div>
  <div className="flex flex-col items-center text-center">
  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFD700]/20 to-[#FFB800]/10 mb-4 shadow-sm border border-[#FFD700]/10">
